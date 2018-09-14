@@ -37,7 +37,7 @@ class Robinhood:
     """Wrapper class for fetching/parsing Robinhood endpoints """
 
     endpoints = {
-        "login": "https://api.robinhood.com/api-token-auth/",
+        "login": "https://api.robinhood.com/oauth2/token/",
         "logout": "https://api.robinhood.com/api-token-logout/",
         "investment_profile": "https://api.robinhood.com/user/investment_profile/",
         "accounts": "https://api.robinhood.com/accounts/",
@@ -121,15 +121,19 @@ class Robinhood:
         self.username = username
         self.password = password
         payload = {
-            'password': self.password,
-            'username': self.username
-        }
+        'client_id': 'c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS',
+        'expires_in': 86400,
+        'grant_type': 'password',
+        'password': self.password,
+        'scope': 'internal',
+        'username': self.username
+		}
 
         if mfa_code:
             payload['mfa_code'] = mfa_code
 
         try:
-            res = self.session.post(self.endpoints['login'], data=payload)
+            res = self.session.post(self.endpoints['login'], data=payload, timeout=15)
             res.raise_for_status()
             data = res.json()
         except requests.exceptions.HTTPError:
@@ -138,9 +142,9 @@ class Robinhood:
         if 'mfa_required' in data.keys():           #pragma: no cover
             raise RH_exception.TwoFactorRequired()  #requires a second call to enable 2FA
 
-        if 'token' in data.keys():
-            self.auth_token = data['token']
-            self.headers['Authorization'] = 'Token ' + self.auth_token
+        if 'access_token' in data.keys():
+            self.auth_token = data['access_token']
+            self.headers['Authorization'] = 'Bearer ' + self.auth_token
             return True
 
         return False
